@@ -1,0 +1,19 @@
+---
+- name: Install Active Directory Domain Services Feature
+  ansible.windows.win_feature:
+    name: AD-Domain-Services
+    include_management_tools: yes
+    state: present
+  register: ad_feature
+
+- name: Promote Server to Active Directory Domain Controller
+  microsoft.ad.domain:
+    dns_domain_name: "asad.local"
+    domain_netbios_name: "ASAD"
+    safe_mode_password: "Password123!"
+  register: ad_promoted
+
+- name: Reboot Domain Controller after AD Promotion
+  ansible.windows.win_reboot:
+    reboot_timeout: 600
+  when: ad_promoted.reboot_required

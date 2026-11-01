@@ -1,0 +1,23 @@
+---
+- name: Set Primary DNS to Domain Controller IP
+  ansible.windows.win_dns_client:
+    adapter_names: '*'
+    ipv4_addresses:
+      - '192.168.56.10'
+
+- name: Join Workstation to asad.local Domain
+  microsoft.ad.membership:
+    dns_domain_name: "asad.local"
+    domain_admin_user: "ASAD\\Administrator"
+    domain_admin_password: "Password123!"
+    state: domain
+  register: domain_joined
+
+- name: Reboot Workstation After Domain Join
+  ansible.windows.win_reboot:
+  when: domain_joined.reboot_required
+
+- name: Enable Unconstrained Delegation on ASAD-WS01 Computer Account
+  ansible.windows.win_shell: |
+    Set-ADComputer -Identity "ASAD-WS01" -TrustedForDelegation $true
+  delegate_to: ASAD-DC01

@@ -1,0 +1,13 @@
+---
+- name: Deploy ASAD Domain Controller
+  hosts: domain_controllers
+  gather_facts: yes
+  roles:
+    - ad_dc_setup
+    - vulnerabilities
+
+- name: Configure and Join Workstations
+  hosts: workstations
+  gather_facts: yes
+  roles:
+    - workstation_join

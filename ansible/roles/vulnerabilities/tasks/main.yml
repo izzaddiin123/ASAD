@@ -1,0 +1,53 @@
+---
+- name: Create Organizational Units
+  microsoft.ad.object:
+    dn: "OU=ASAD_Users,DC=asad,DC=local"
+    state: present
+    type: organizationalUnit
+
+- name: Create Kerberoastable Service Account (svc_mssql)
+  microsoft.ad.user:
+    name: "svc_mssql"
+    firstname: "MSSQL"
+    lastname: "Service"
+    password: "Password123!"
+    path: "OU=ASAD_Users,DC=asad,DC=local"
+    state: present
+    enabled: true
+
+- name: Assign SPN to svc_mssql for Kerberoasting
+  ansible.windows.win_shell: |
+    setspn -S MSSQLSvc/ASAD-DC01.asad.local:1433 svc_mssql
+
+- name: Create AS-REP Roastable User Account (j.doe)
+  ansible.windows.win_shell: |
+    Import-Module ActiveDirectory
+    $Password = ConvertTo-SecureString "Password123!" -AsPlainText -Force
+    New-ADUser -Name "j.doe" -AccountPassword $Password -Enabled $true -Path "OU=ASAD_Users,DC=asad,DC=local"
+    Set-ADUser -Identity "j.doe" -DoesNotRequirePreAuth $true
+
+- name: Create Helpdesk User for ACL Misconfiguration
+  microsoft.ad.user:
+    name: "h.technician"
+    password: "Password123!"
+    path: "OU=ASAD_Users,DC=asad,DC=local"
+    state: present
+    enabled: true
+
+- name: Apply GenericAll ACL on Domain Admins Group for Helpdesk User
+  ansible.windows.win_shell: |
+    Import-Module ActiveDirectory
+    $TargetGroup = Get-ADGroup -Identity "Domain Admins"
+    $User = Get-ADUser -Identity "h.technician"
+    $Sid = New-Object System.Security.Principal.SecurityIdentifier($User.SID)
+    $Acl = Get-Acl -Path "AD:\$($TargetGroup.DistinguishedName)"
+    $Ace = New-Object System.DirectoryServices.ActiveDirectoryAccessRule($Sid, "GenericAll", "Allow")
+    $Acl.AddAccessRule($Ace)
+    Set-Acl -Path "AD:\$($TargetGroup.DistinguishedName)" -AclObject $Acl
+
+- name: Enable Legacy Protocol Vulnerabilities (LLMNR / NBT-NS)
+  ansible.windows.win_regedit:
+    path: HKCU:\Software\Policies\Microsoft\Windows NT\DNSClient
+    name: EnableMulticast
+    data: 1
+    type: dword
