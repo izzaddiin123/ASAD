@@ -45,8 +45,8 @@ Make sure you have installed the following dependencies on your host control nod
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/armwq/asad.git
-   cd asad
+   git clone https://github.com/izzaddiin123/ASAD.git
+   cd ASAD
    ```
 
 2. **Boot the base Virtual Machines:**
